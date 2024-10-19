@@ -8,14 +8,18 @@ const TaskRouter = require("./Routes/TaskRouter");
 const bodyParser = require("body-parser");
 const { fetchAllTasks } = require("./Controllers/TaskControler");
 const AuthRouter = require("./Routes/AuthRouter");
+const ensureAuthenticated = require("./MiddleWare/Auth");
+
 // app.get("/", (req, res) => {
 //   res.send("Hello from Server");
 // });
-app.get("/", fetchAllTasks);
+
 app.use(bodyParser.json());
 app.use(cors());
-app.use("/tasks", TaskRouter);
+
 app.use("/auth", AuthRouter);
+app.use("/tasks", ensureAuthenticated, TaskRouter);
+app.use("/", ensureAuthenticated, fetchAllTasks);
 app.listen(PORT, () => {
   console.log(`Server is running on Port =${PORT}`);
 });
