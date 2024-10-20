@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { handleError, handleSuccess } from "../utils";
 import { ToastContainer } from "react-toastify";
+import { createTask, deleteTaskById, getAllTask, updateTaskById } from "../api";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -15,7 +16,11 @@ export default function Dashboard() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [currentTodoIndex, setCurrentTodoIndex] = useState(null);
 
-  const handleAddTodo = () => {
+  // New filter states
+  const [filterByDate, setFilterByDate] = useState(""); // For due date filtering
+  const [filterByStatus, setFilterByStatus] = useState("all"); // For status filtering (all, pending, completed)
+
+  const handleAddTodo = async () => {
     if (!taskName) {
       handleError("Please enter a task name");
       return;
@@ -41,11 +46,33 @@ export default function Dashboard() {
       setTodos([...todos, newTodo]);
       handleSuccess("Task added successfully");
     }
+    try {
+      await createTask(newTodo);
 
-    resetForm();
-    setModalOpen(false);
+      resetForm();
+      setModalOpen(false);
+      fetchAllTasks();
+    } catch (err) {
+      handleError(err);
+    }
   };
+  const fetchAllTasks = async () => {
+    try {
+      const { data } = await getAllTask();
+      const processedData = data.map((todo) => ({
+        ...todo,
+        isPending: todo.isPending ?? todo.isCompleted,
+        isCompleted: todo.isCompleted ?? todo.isPending,
+      }));
 
+      setTodos(processedData);
+    } catch (err) {
+      handleError(err);
+    }
+  };
+  useEffect(() => {
+    fetchAllTasks();
+  }, []);
   const resetForm = () => {
     setTaskName("");
     setDescription("");
@@ -68,22 +95,61 @@ export default function Dashboard() {
     }, 1000);
   };
 
-  const handleEditTodo = (index) => {
-    const todoToEdit = todos[index];
-    setTaskName(todoToEdit.taskName);
-    setDescription(todoToEdit.description);
-    setDueDate(todoToEdit.dueDate);
-    setIsPending(todoToEdit.isPending);
+  const handleEditTodo = async (todo) => {
+    const { _id, taskName, description, dueDate, isPending, isCompleted } =
+      todo;
+    const obj = {
+      _id,
+      taskName,
+      description,
+      dueDate,
+      isPending: !isPending,
+      isCompleted: !isCompleted,
+    };
+    const todoToEdit = todos[todo._id];
+    setTaskName(obj.taskName);
+    setDescription(obj.description);
+    setDueDate(obj.dueDate);
+    setIsPending(obj.isPending);
     setIsCompleted(todoToEdit.isCompleted);
-    setCurrentTodoIndex(index);
+    setCurrentTodoIndex(_id);
     setModalOpen(true);
+    try {
+      await updateTaskById(_id, obj);
+      handleSuccess("Task Updated Successfully");
+    } catch (error) {
+      handleError(error);
+    }
   };
 
-  const handleDeleteTodo = (index) => {
-    const updatedTodos = todos.filter((_, i) => i !== index);
-    setTodos(updatedTodos);
-    handleSuccess("Task deleted successfully");
+  // Corrected: Handle deletion based on the todo's unique identifier (index of original todos list)
+  const handleDeleteTodo = async (id) => {
+    try {
+      await deleteTaskById(id);
+      handleSuccess("Task deleted successfully");
+      fetchAllTasks();
+    } catch (err) {
+      handleError(err);
+    }
   };
+
+  // Apply filters to todos
+  const filteredTodos = todos.filter((todo) => {
+    // Filter by status
+    if (filterByStatus === "pending" && (!todo.isPending || todo.isCompleted)) {
+      return false;
+    }
+    if (filterByStatus === "completed" && !todo.isCompleted) {
+      return false;
+    }
+
+    // Filter by due date
+    if (filterByDate && todo.dueDate !== filterByDate) {
+      return false;
+    }
+
+    return true;
+  });
 
   return (
     <div className="bg-gray-100 min-h-screen p-4">
@@ -104,6 +170,40 @@ export default function Dashboard() {
         >
           Add Todo
         </button>
+
+        {/* Filter UI */}
+        <div className="flex flex-col md:flex-row justify-center gap-4 my-4">
+          {/* Filter by Due Date */}
+          <div>
+            <label htmlFor="filterDate" className="block mb-2">
+              Filter by Due Date:
+            </label>
+            <input
+              type="date"
+              id="filterDate"
+              value={filterByDate}
+              onChange={(e) => setFilterByDate(e.target.value)}
+              className="border border-gray-300 rounded-md p-2 w-full"
+            />
+          </div>
+
+          {/* Filter by Status */}
+          <div>
+            <label htmlFor="filterStatus" className="block mb-2">
+              Filter by Status:
+            </label>
+            <select
+              id="filterStatus"
+              value={filterByStatus}
+              onChange={(e) => setFilterByStatus(e.target.value)}
+              className="border border-gray-300 rounded-md p-2 w-full"
+            >
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        </div>
 
         {/* Modal for Adding or Editing Todo */}
         {modalOpen && (
@@ -141,9 +241,11 @@ export default function Dashboard() {
                 <input
                   type="checkbox"
                   checked={isPending}
-                  onChange={() => {
-                    setIsPending(true);
-                    setIsCompleted(false);
+                  onChange={(e) => {
+                    setIsPending(e.target.checked);
+                    if (e.target.checked) {
+                      setIsCompleted(false);
+                    }
                   }}
                   className="mr-2"
                 />
@@ -154,9 +256,11 @@ export default function Dashboard() {
                 <input
                   type="checkbox"
                   checked={isCompleted}
-                  onChange={() => {
-                    setIsCompleted(true);
-                    setIsPending(false);
+                  onChange={(e) => {
+                    setIsCompleted(e.target.checked);
+                    if (e.target.checked) {
+                      setIsPending(false);
+                    }
                   }}
                   className="mr-2"
                 />
@@ -186,13 +290,11 @@ export default function Dashboard() {
             <h2 className="text-xl font-semibold text-center mb-2">
               Pending Tasks
             </h2>
-            <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 shadow-md min-h-[50px]">
-              {/* Setting min-h-[300px] to ensure initial vertical size */}
+            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 shadow-md min-h-[50px]">
               <ul className="list-disc pl-5 mb-4">
-                {todos.filter((todo) => todo.isPending && !todo.isCompleted)
-                  .length > 0 ? (
-                  todos
-                    .filter((todo) => todo.isPending && !todo.isCompleted)
+                {filteredTodos.filter((todo) => todo.isPending).length > 0 ? (
+                  filteredTodos
+                    .filter((todo) => todo.isPending)
                     .map((todo, index) => (
                       <li
                         key={index}
@@ -209,14 +311,18 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <button
-                            onClick={() => handleEditTodo(index)}
-                            className="text-blue-500 hover:underline ml-2"
+                            onClick={
+                              () => handleEditTodo(todo._id) // Pass correct index
+                            }
+                            className="text-blue-500 mr-2"
                           >
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDeleteTodo(index)}
-                            className="text-red-500 hover:underline ml-2"
+                            onClick={
+                              () => handleDeleteTodo(todo._id) // Pass correct index
+                            }
+                            className="text-red-500"
                           >
                             Delete
                           </button>
@@ -235,11 +341,10 @@ export default function Dashboard() {
             <h2 className="text-xl font-semibold text-center mb-2">
               Completed Tasks
             </h2>
-            <div className="bg-green-100 border border-green-300 rounded-lg p-4 shadow-md min-h-[72px]">
-              {/* Setting min-h-[300px] to ensure initial vertical size */}
-              <ul className="list-disc pl-5">
-                {todos.filter((todo) => todo.isCompleted).length > 0 ? (
-                  todos
+            <div className="bg-green-100 border border-green-300 rounded-lg p-4 shadow-md min-h-[50px]">
+              <ul className="list-disc pl-5 mb-4">
+                {filteredTodos.filter((todo) => todo.isCompleted).length > 0 ? (
+                  filteredTodos
                     .filter((todo) => todo.isCompleted)
                     .map((todo, index) => (
                       <li
@@ -257,14 +362,18 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <button
-                            onClick={() => handleEditTodo(index)}
-                            className="text-blue-500 hover:underline ml-2"
+                            onClick={
+                              () => handleEditTodo(todo._id) // Pass correct index
+                            }
+                            className="text-blue-500 mr-2"
                           >
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDeleteTodo(index)}
-                            className="text-red-500 hover:underline ml-2"
+                            onClick={
+                              () => handleDeleteTodo(todo._id) // Pass correct index
+                            }
+                            className="text-red-500"
                           >
                             Delete
                           </button>
