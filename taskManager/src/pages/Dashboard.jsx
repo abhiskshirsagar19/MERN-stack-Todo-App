@@ -30,8 +30,8 @@ export default function Dashboard() {
       taskName,
       description,
       dueDate,
-      isPending,
-      isCompleted,
+      isPending: !isCompleted,
+      isCompleted: !isCompleted,
     };
 
     // Add new todo only
@@ -107,8 +107,9 @@ export default function Dashboard() {
       setTaskName(taskName);
       setDescription(description);
       setDueDate(dueDate);
+
+      //setIsCompleted(isCompleted);
       setIsPending(isPending);
-      setIsCompleted(isCompleted);
       setCurrentTodoIndex(_id); // Set the currentTodoIndex to the todo's _id
       setModalOpen(true); // Open modal for editing
     } else {
