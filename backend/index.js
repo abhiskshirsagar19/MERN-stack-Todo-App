@@ -19,7 +19,7 @@ app.use(cors());
 
 app.use("/auth", AuthRouter);
 app.use("/tasks", ensureAuthenticated, TaskRouter);
-app.use("/", ensureAuthenticated, fetchAllTasks);
+app.use("/", fetchAllTasks);
 app.listen(PORT, () => {
   console.log(`Server is running on Port =${PORT}`);
 });

@@ -43,7 +43,7 @@ export const getAllTask = async () => {
 export const deleteTaskById = async (id, reqBody) => {
   const url = `${API_URL}/tasks/${id}`;
   const token = localStorage.getItem("token");
-  console.log("Token being sent:", token);
+
   const options = {
     method: "DELETE",
     headers: {
@@ -60,17 +60,19 @@ export const deleteTaskById = async (id, reqBody) => {
     return err;
   }
 };
-export const updateTaskById = async (id) => {
+export const updateTaskById = async (id, updatedTaskData) => {
   const url = `${API_URL}/tasks/${id}`;
   const token = localStorage.getItem("token");
-  console.log("Token being sent:", token);
+
   const options = {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
+    body: JSON.stringify(updatedTaskData), // Add the task data to the request body
   };
+
   try {
     const result = await fetch(url, options);
     const data = await result.json();

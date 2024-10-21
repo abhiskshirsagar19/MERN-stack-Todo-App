@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { handleError, handleSuccess } from "../utils";
 import { ToastContainer } from "react-toastify";
@@ -34,31 +34,25 @@ export default function Dashboard() {
       isCompleted,
     };
 
-    if (currentTodoIndex !== null) {
-      // Update existing todo
-      const updatedTodos = todos.map((todo, index) =>
-        index === currentTodoIndex ? newTodo : todo
-      );
-      setTodos(updatedTodos);
-      handleSuccess("Task updated successfully");
+    // Add new todo only
+    if (currentTodoIndex === null) {
+      try {
+        await createTask(newTodo); // Call API to create a new task
+        handleSuccess("Task added successfully");
+        resetForm();
+        setModalOpen(false);
+        fetchAllTasks(); // Refresh task list
+      } catch (err) {
+        handleError(err);
+      }
     } else {
-      // Add new todo
-      setTodos([...todos, newTodo]);
-      handleSuccess("Task added successfully");
-    }
-    try {
-      await createTask(newTodo);
-
-      resetForm();
-      setModalOpen(false);
-      fetchAllTasks();
-    } catch (err) {
-      handleError(err);
+      handleError("Invalid operation for adding todo.");
     }
   };
   const fetchAllTasks = async () => {
     try {
       const { data } = await getAllTask();
+
       const processedData = data.map((todo) => ({
         ...todo,
         isPending: todo.isPending ?? todo.isCompleted,
@@ -95,32 +89,70 @@ export default function Dashboard() {
     }, 1000);
   };
 
-  const handleEditTodo = async (todo) => {
+  const handleEditTodo = (todo) => {
+    if (!todo) {
+      handleError("Todo item is undefined.");
+      return;
+    }
+
     const { _id, taskName, description, dueDate, isPending, isCompleted } =
       todo;
-    const obj = {
-      _id,
+
+    // Log to verify the todo and its _id
+    console.log("Editing todo:", todo);
+    console.log("Current Todo ID:", _id);
+
+    // Check if _id is valid before setting state
+    if (_id) {
+      setTaskName(taskName);
+      setDescription(description);
+      setDueDate(dueDate);
+      setIsPending(isPending);
+      setIsCompleted(isCompleted);
+      setCurrentTodoIndex(_id); // Set the currentTodoIndex to the todo's _id
+      setModalOpen(true); // Open modal for editing
+    } else {
+      handleError("No valid task selected for editing.");
+    }
+  };
+
+  // New function to handle the submission of the form in the modal
+  const handleUpdateTodo = async () => {
+    if (!currentTodoIndex) {
+      handleError("No task selected to update.");
+      return;
+    }
+
+    // Create the updated task object
+    const updatedTodo = {
+      _id: currentTodoIndex,
       taskName,
       description,
       dueDate,
-      isPending: !isPending,
-      isCompleted: !isCompleted,
+      isPending,
+      isCompleted,
     };
-    const todoToEdit = todos[todo._id];
-    setTaskName(obj.taskName);
-    setDescription(obj.description);
-    setDueDate(obj.dueDate);
-    setIsPending(obj.isPending);
-    setIsCompleted(todoToEdit.isCompleted);
-    setCurrentTodoIndex(_id);
-    setModalOpen(true);
+
     try {
-      await updateTaskById(_id, obj);
-      handleSuccess("Task Updated Successfully");
+      // Make API call to update the task by its ID
+      await updateTaskById(currentTodoIndex, updatedTodo);
+
+      // Update the local state (todos) after successful API call
+      setTodos((prevTodos) =>
+        prevTodos.map((t) =>
+          t._id === currentTodoIndex ? { ...t, ...updatedTodo } : t
+        )
+      );
+
+      handleSuccess("Task updated successfully");
+      setModalOpen(false); // Close the modal after successful update
+      resetForm(); // Reset form to prepare for next task update/addition
     } catch (error) {
       handleError(error);
     }
   };
+
+  // Reset form fields
 
   // Corrected: Handle deletion based on the todo's unique identifier (index of original todos list)
   const handleDeleteTodo = async (id) => {
@@ -154,7 +186,7 @@ export default function Dashboard() {
   return (
     <div className="bg-gray-100 min-h-screen p-4">
       <h1 className="text-center font-bold text-4xl mt-6">
-        Welcome to {loggedInUser}'s tasks
+        Welcome to {loggedInUser} tasks
       </h1>
       <button
         onClick={handleLogout}
@@ -219,6 +251,7 @@ export default function Dashboard() {
                 onChange={(e) => setTaskName(e.target.value)}
                 className="border border-gray-300 rounded-md p-2 w-full mb-4"
                 placeholder="Enter task name"
+                required
               />
 
               <label className="block mb-2">Description:</label>
@@ -227,14 +260,16 @@ export default function Dashboard() {
                 onChange={(e) => setDescription(e.target.value)}
                 className="border border-gray-300 rounded-md p-2 w-full mb-4"
                 placeholder="Enter task description"
+                required
               ></textarea>
 
               <label className="block mb-2">Due Date:</label>
               <input
                 type="date"
-                value={dueDate}
+                value={dueDate.split("T")[0]} // Ensure it's formatted as YYYY-MM-DD
                 onChange={(e) => setDueDate(e.target.value)}
                 className="border border-gray-300 rounded-md p-2 w-full mb-4"
+                required
               />
 
               <label className="flex items-center mb-4">
@@ -268,7 +303,9 @@ export default function Dashboard() {
               </label>
 
               <button
-                onClick={handleAddTodo}
+                onClick={
+                  currentTodoIndex !== null ? handleUpdateTodo : handleAddTodo
+                } // Conditional handler
                 className="bg-blue-500 text-white rounded-md p-2 hover:bg-blue-600 w-full"
               >
                 {currentTodoIndex !== null ? "Update" : "Save"}
@@ -295,9 +332,9 @@ export default function Dashboard() {
                 {filteredTodos.filter((todo) => todo.isPending).length > 0 ? (
                   filteredTodos
                     .filter((todo) => todo.isPending)
-                    .map((todo, index) => (
+                    .map((todo) => (
                       <li
-                        key={index}
+                        key={todo._id} // Use the todo's _id as the key instead of index
                         className="mb-2 flex justify-between items-center"
                       >
                         <div>
@@ -311,17 +348,13 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <button
-                            onClick={
-                              () => handleEditTodo(todo._id) // Pass correct index
-                            }
+                            onClick={() => handleEditTodo(todo)} // Pass only the todo object
                             className="text-blue-500 mr-2"
                           >
                             Edit
                           </button>
                           <button
-                            onClick={
-                              () => handleDeleteTodo(todo._id) // Pass correct index
-                            }
+                            onClick={() => handleDeleteTodo(todo._id)} // Use the todo's _id
                             className="text-red-500"
                           >
                             Delete
@@ -363,7 +396,7 @@ export default function Dashboard() {
                         <div>
                           <button
                             onClick={
-                              () => handleEditTodo(todo._id) // Pass correct index
+                              () => handleEditTodo(todo) // Pass correct index
                             }
                             className="text-blue-500 mr-2"
                           >
