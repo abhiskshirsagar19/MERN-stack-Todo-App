@@ -5,15 +5,15 @@ const UserSchema = new Schema(
   {
     name: {
       type: "String",
-      require: true,
+      required: true,
     },
     email: {
       type: "String",
-      require: true,
+      required: true,
     },
     password: {
       type: "String",
-      require: true,
+      required: true,
     },
     tasks: [
       {
@@ -31,12 +31,12 @@ const UserSchema = new Schema(
           default: Date.now,
         },
         isPending: {
-          type: String,
+          type: Boolean,
           required: true,
           default: true,
         },
         isCompleted: {
-          type: String,
+          type: Boolean,
           required: true,
           default: false,
         },
