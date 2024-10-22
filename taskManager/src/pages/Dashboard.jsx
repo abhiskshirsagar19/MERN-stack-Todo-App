@@ -99,8 +99,6 @@ export default function Dashboard() {
       todo;
 
     // Log to verify the todo and its _id
-    console.log("Editing todo:", todo);
-    console.log("Current Todo ID:", _id);
 
     // Check if _id is valid before setting state
     if (_id) {

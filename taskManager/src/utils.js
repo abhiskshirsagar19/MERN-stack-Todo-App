@@ -12,4 +12,4 @@ export const handleError = (msg) => {
   });
 };
 
-export const API_URL = "https://mern-stack-todo-app-zmbt.vercel.app/";
+export const API_URL = "https://mern-stack-todo-app-zmbt.vercel.app";

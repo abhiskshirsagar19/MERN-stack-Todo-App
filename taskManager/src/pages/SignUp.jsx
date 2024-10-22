@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
-import { handleError, handleSuccess } from "../utils";
+import { API_URL, handleError, handleSuccess } from "../utils";
 export default function SignUp() {
   const [registerInfo, setRegisterInfo] = useState({
     name: "",
@@ -23,7 +23,7 @@ export default function SignUp() {
       return handleError("Name, Email, Password required.");
     }
     try {
-      const url = "http://localhost:3000/auth/register";
+      const url = `${API_URL}/auth/register`;
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-type": "application/json" },
