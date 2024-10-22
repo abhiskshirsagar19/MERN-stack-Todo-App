@@ -30,11 +30,10 @@ export default function Dashboard() {
       taskName,
       description,
       dueDate,
-      isPending: !isCompleted,
-      isCompleted: !isCompleted,
+      isPending: !isCompleted, // Mutually exclusive check
+      isCompleted, // Based on user selection
     };
 
-    // Add new todo only
     if (currentTodoIndex === null) {
       try {
         await createTask(newTodo); // Call API to create a new task
@@ -49,14 +48,15 @@ export default function Dashboard() {
       handleError("Invalid operation for adding todo.");
     }
   };
+
   const fetchAllTasks = async () => {
     try {
       const { data } = await getAllTask();
 
       const processedData = data.map((todo) => ({
         ...todo,
-        isPending: todo.isPending ?? todo.isCompleted,
-        isCompleted: todo.isCompleted ?? todo.isPending,
+        isPending: todo.isPending, // Use stored values directly
+        isCompleted: todo.isCompleted,
       }));
 
       setTodos(processedData);
@@ -64,9 +64,11 @@ export default function Dashboard() {
       handleError(err);
     }
   };
+
   useEffect(() => {
     fetchAllTasks();
   }, []);
+
   const resetForm = () => {
     setTaskName("");
     setDescription("");
@@ -98,31 +100,25 @@ export default function Dashboard() {
     const { _id, taskName, description, dueDate, isPending, isCompleted } =
       todo;
 
-    // Log to verify the todo and its _id
-
-    // Check if _id is valid before setting state
     if (_id) {
       setTaskName(taskName);
       setDescription(description);
       setDueDate(dueDate);
-
-      //setIsCompleted(isCompleted);
       setIsPending(isPending);
-      setCurrentTodoIndex(_id); // Set the currentTodoIndex to the todo's _id
-      setModalOpen(true); // Open modal for editing
+      setIsCompleted(isCompleted);
+      setCurrentTodoIndex(_id);
+      setModalOpen(true);
     } else {
       handleError("No valid task selected for editing.");
     }
   };
 
-  // New function to handle the submission of the form in the modal
   const handleUpdateTodo = async () => {
     if (!currentTodoIndex) {
       handleError("No task selected to update.");
       return;
     }
 
-    // Create the updated task object
     const updatedTodo = {
       _id: currentTodoIndex,
       taskName,
@@ -133,10 +129,8 @@ export default function Dashboard() {
     };
 
     try {
-      // Make API call to update the task by its ID
       await updateTaskById(currentTodoIndex, updatedTodo);
 
-      // Update the local state (todos) after successful API call
       setTodos((prevTodos) =>
         prevTodos.map((t) =>
           t._id === currentTodoIndex ? { ...t, ...updatedTodo } : t
@@ -144,16 +138,13 @@ export default function Dashboard() {
       );
 
       handleSuccess("Task updated successfully");
-      setModalOpen(false); // Close the modal after successful update
-      resetForm(); // Reset form to prepare for next task update/addition
+      setModalOpen(false);
+      resetForm();
     } catch (error) {
       handleError(error);
     }
   };
 
-  // Reset form fields
-
-  // Corrected: Handle deletion based on the todo's unique identifier (index of original todos list)
   const handleDeleteTodo = async (id) => {
     try {
       await deleteTaskById(id);
@@ -164,21 +155,16 @@ export default function Dashboard() {
     }
   };
 
-  // Apply filters to todos
   const filteredTodos = todos.filter((todo) => {
-    // Filter by status
     if (filterByStatus === "pending" && (!todo.isPending || todo.isCompleted)) {
       return false;
     }
     if (filterByStatus === "completed" && !todo.isCompleted) {
       return false;
     }
-
-    // Filter by due date
     if (filterByDate && todo.dueDate !== filterByDate) {
       return false;
     }
-
     return true;
   });
 
@@ -202,38 +188,25 @@ export default function Dashboard() {
           Add Todo
         </button>
 
-        {/* Filter UI */}
-        <div className="flex flex-col md:flex-row justify-center gap-4 my-4">
-          {/* Filter by Due Date */}
-          <div>
-            <label htmlFor="filterDate" className="block mb-2">
-              Filter by Due Date:
-            </label>
-            <input
-              type="date"
-              id="filterDate"
-              value={filterByDate}
-              onChange={(e) => setFilterByDate(e.target.value)}
-              className="border border-gray-300 rounded-md p-2 w-full"
-            />
-          </div>
-
-          {/* Filter by Status */}
-          <div>
-            <label htmlFor="filterStatus" className="block mb-2">
-              Filter by Status:
-            </label>
-            <select
-              id="filterStatus"
-              value={filterByStatus}
-              onChange={(e) => setFilterByStatus(e.target.value)}
-              className="border border-gray-300 rounded-md p-2 w-full"
-            >
-              <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
+        {/* Filters Section */}
+        <div className="mt-6">
+          <label className="block mb-2">Filter by Due Date:</label>
+          <input
+            type="date"
+            value={filterByDate}
+            onChange={(e) => setFilterByDate(e.target.value)}
+            className="border border-gray-300 rounded-md p-2 w-full max-w-xs mb-4"
+          />
+          <label className="block mb-2">Filter by Status:</label>
+          <select
+            value={filterByStatus}
+            onChange={(e) => setFilterByStatus(e.target.value)}
+            className="border border-gray-300 rounded-md p-2 w-full max-w-xs"
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
         </div>
 
         {/* Modal for Adding or Editing Todo */}
@@ -265,7 +238,7 @@ export default function Dashboard() {
               <label className="block mb-2">Due Date:</label>
               <input
                 type="date"
-                value={dueDate.split("T")[0]} // Ensure it's formatted as YYYY-MM-DD
+                value={dueDate ? dueDate.split("T")[0] : ""}
                 onChange={(e) => setDueDate(e.target.value)}
                 className="border border-gray-300 rounded-md p-2 w-full mb-4"
                 required
@@ -304,14 +277,18 @@ export default function Dashboard() {
               <button
                 onClick={
                   currentTodoIndex !== null ? handleUpdateTodo : handleAddTodo
-                } // Conditional handler
-                className="bg-blue-500 text-white rounded-md p-2 hover:bg-blue-600 w-full"
+                }
+                className="bg-blue-500 text-white rounded-md p-2 w-full"
               >
-                {currentTodoIndex !== null ? "Update" : "Save"}
+                {currentTodoIndex !== null ? "Update Task" : "Add Task"}
               </button>
+
               <button
-                onClick={() => setModalOpen(false)}
-                className="bg-red-500 text-white rounded-md p-2 hover:bg-red-600 w-full mt-2"
+                onClick={() => {
+                  setModalOpen(false);
+                  resetForm();
+                }}
+                className="bg-gray-500 text-white rounded-md p-2 w-full mt-2"
               >
                 Cancel
               </button>
@@ -319,108 +296,69 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Horizontal layout for Pending and Completed Tasks */}
-        <div className="flex flex-col md:flex-row mt-6 w-full max-w-6xl">
-          {/* Pending Tasks Section */}
-          <div className="md:w-1/2 w-full md:pr-2 mb-4 md:mb-0">
-            <h2 className="text-xl font-semibold text-center mb-2">
-              Pending Tasks
-            </h2>
-            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 shadow-md min-h-[50px]">
-              <ul className="list-disc pl-5 mb-4">
-                {filteredTodos.filter((todo) => todo.isPending).length > 0 ? (
-                  filteredTodos
-                    .filter((todo) => todo.isPending)
-                    .map((todo) => (
-                      <li
-                        key={todo._id} // Use the todo's _id as the key instead of index
-                        className="mb-2 flex justify-between items-center"
-                      >
-                        <div>
-                          <strong>{todo.taskName}</strong>
-                          <br />
-                          {todo.description}
-                          <br />
-                          <span className="text-sm text-gray-600">
-                            Due: {todo.dueDate}
-                          </span>
-                        </div>
-                        <div>
-                          <button
-                            onClick={() => handleEditTodo(todo)} // Pass only the todo object
-                            className="text-blue-500 mr-2"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTodo(todo._id)} // Use the todo's _id
-                            className="text-red-500"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </li>
-                    ))
-                ) : (
-                  <li>No pending tasks</li>
-                )}
-              </ul>
-            </div>
+        {/* Tasks Lists */}
+        <div className="flex gap-80">
+          <div className="mt-10">
+            <h2 className="text-xl font-bold mb-4">Completed Tasks</h2>
+            <ul>
+              {filteredTodos
+                .filter((todo) => todo.isCompleted)
+                .map((todo) => (
+                  <li
+                    key={todo._id}
+                    className="bg-green-300 shadow-md p-4 mb-2 rounded-lg"
+                  >
+                    <h3 className="font-bold">{todo.taskName}</h3>
+                    <p>{todo.description}</p>
+                    <p>Due: {new Date(todo.dueDate).toLocaleDateString()}</p>
+                    <button
+                      onClick={() => handleEditTodo(todo)}
+                      className="bg-gray-500 text-white rounded-md p-2 mt-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTodo(todo._id)}
+                      className="bg-red-500 text-white rounded-md p-2 mt-2 ml-3"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+            </ul>
           </div>
 
-          {/* Completed Tasks Section */}
-          <div className="md:w-1/2 w-full md:pl-2">
-            <h2 className="text-xl font-semibold text-center mb-2">
-              Completed Tasks
-            </h2>
-            <div className="bg-green-100 border border-green-300 rounded-lg p-4 shadow-md min-h-[50px]">
-              <ul className="list-disc pl-5 mb-4">
-                {filteredTodos.filter((todo) => todo.isCompleted).length > 0 ? (
-                  filteredTodos
-                    .filter((todo) => todo.isCompleted)
-                    .map((todo, index) => (
-                      <li
-                        key={index}
-                        className="mb-2 flex justify-between items-center"
-                      >
-                        <div>
-                          <strong>{todo.taskName}</strong>
-                          <br />
-                          {todo.description}
-                          <br />
-                          <span className="text-sm text-gray-600">
-                            Due: {todo.dueDate}
-                          </span>
-                        </div>
-                        <div>
-                          <button
-                            onClick={
-                              () => handleEditTodo(todo) // Pass correct index
-                            }
-                            className="text-blue-500 mr-2"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={
-                              () => handleDeleteTodo(todo._id) // Pass correct index
-                            }
-                            className="text-red-500"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </li>
-                    ))
-                ) : (
-                  <li>No completed tasks</li>
-                )}
-              </ul>
-            </div>
+          <div className="mt-10">
+            <h2 className="text-xl font-bold mb-4">Pending Tasks</h2>
+            <ul>
+              {filteredTodos
+                .filter((todo) => !todo.isCompleted)
+                .map((todo) => (
+                  <li
+                    key={todo._id}
+                    className="bg-sky-300 shadow-md p-4 mb-2 rounded-md"
+                  >
+                    <h3 className="font-bold">{todo.taskName}</h3>
+                    <p>{todo.description}</p>
+                    <p>Due: {new Date(todo.dueDate).toLocaleDateString()}</p>
+                    <button
+                      onClick={() => handleEditTodo(todo)}
+                      className="bg-gray-500 text-white rounded-md p-2 mt-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTodo(todo._id)}
+                      className="bg-red-500 text-white rounded-md p-2 mt-2 ml-3"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+            </ul>
           </div>
         </div>
       </div>
-
       <ToastContainer />
     </div>
   );
