@@ -17,7 +17,7 @@ const ensureAuthenticated = require("./MiddleWare/Auth");
 app.use(bodyParser.json());
 app.use(
   cors({
-    origin: "http://localhost:5173", // Allow only this origin
+    origin: "*", // Allow only this origin
     methods: "GET,POST,PUT,DELETE", // Allowed methods
     credentials: true, // Allow credentials if needed
   })
