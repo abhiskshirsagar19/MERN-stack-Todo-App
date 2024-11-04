@@ -297,7 +297,68 @@ export default function Dashboard() {
         )}
 
         {/* Tasks Lists */}
-        <div className="flex gap-80">
+        {/* <div className="flex gap-80">
+          <div className="mt-10">
+            <h2 className="text-xl font-bold mb-4">Completed Tasks</h2>
+            <ul>
+              {filteredTodos
+                .filter((todo) => todo.isCompleted)
+                .map((todo) => (
+                  <li
+                    key={todo._id}
+                    className="bg-green-300 shadow-md p-4 mb-2 rounded-lg"
+                  >
+                    <h3 className="font-bold">{todo.taskName}</h3>
+                    <p>{todo.description}</p>
+                    <p>Due: {new Date(todo.dueDate).toLocaleDateString()}</p>
+                    <button
+                      onClick={() => handleEditTodo(todo)}
+                      className="bg-gray-500 text-white rounded-md p-2 mt-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTodo(todo._id)}
+                      className="bg-red-500 text-white rounded-md p-2 mt-2 ml-3"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
+
+          <div className="mt-10">
+            <h2 className="text-xl font-bold mb-4">Pending Tasks</h2>
+            <ul>
+              {filteredTodos
+                .filter((todo) => !todo.isCompleted)
+                .map((todo) => (
+                  <li
+                    key={todo._id}
+                    className="bg-sky-300 shadow-md p-4 mb-2 rounded-md"
+                  >
+                    <h3 className="font-bold">{todo.taskName}</h3>
+                    <p>{todo.description}</p>
+                    <p>Due: {new Date(todo.dueDate).toLocaleDateString()}</p>
+                    <button
+                      onClick={() => handleEditTodo(todo)}
+                      className="bg-gray-500 text-white rounded-md p-2 mt-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTodo(todo._id)}
+                      className="bg-red-500 text-white rounded-md p-2 mt-2 ml-3"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        </div> */}
+        <div className="flex flex-col md:flex-row gap-10 md:gap-20 lg:gap-80">
           <div className="mt-10">
             <h2 className="text-xl font-bold mb-4">Completed Tasks</h2>
             <ul>
